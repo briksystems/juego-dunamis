@@ -84,9 +84,9 @@ h2{font-size:clamp(28px,8.4vw,44px)}
 input[type=text]{width:100%;max-width:300px;background:transparent;border:0;border-bottom:1px solid var(--accent);color:var(--paper);
   text-align:center;font-family:var(--display);font-weight:700;font-size:22px;padding:10px 4px;outline:none;margin-bottom:6px}
 input::placeholder{color:rgba(244,251,255,.3)}
-#s-guess{justify-content:flex-start;overflow-y:auto}
-#s-guess > :first-child{margin-top:auto}
-#s-guess > :last-child{margin-bottom:auto}
+#s-guess,#s-quiz{justify-content:flex-start;overflow-y:auto}
+#s-guess > :first-child,#s-quiz > :first-child{margin-top:auto}
+#s-guess > :last-child,#s-quiz > :last-child{margin-bottom:auto}
 #s-guess .cluelist{margin:12px auto 16px}
 #s-guess .cluelist li{font-size:12.5px;line-height:1.45;padding:8px 0 8px 30px}
 #s-guess .cluelist li b{top:8px}
@@ -98,6 +98,11 @@ input::placeholder{color:rgba(244,251,255,.3)}
 .opt.bad{opacity:.38;text-decoration:line-through;border-color:rgba(255,255,255,.25);background:transparent;cursor:default}
 .opt.ok{background:var(--accent);color:#0a1a10;border-color:var(--accent)}
 .opt:disabled{cursor:default}
+.qq{display:block;font-size:12px;font-weight:500;line-height:1.35;opacity:.65;letter-spacing:.02em;margin-bottom:3px;font-family:var(--sans)}
+.cluetext .qq{font-size:13px;margin-bottom:10px}
+.qtext{font-family:var(--display);font-weight:700;font-size:clamp(19px,5.4vw,25px);line-height:1.3;max-width:330px;margin:14px auto 22px;text-shadow:0 2px 18px rgba(0,0,0,.5)}
+.opt .let{color:var(--accent);margin-right:10px;font-weight:800}
+.opt.ok .let{color:#0a1a10}
 .msg{min-height:20px;font-size:12px;color:#ffb199;letter-spacing:.06em;margin:6px 0 16px}
 .shake{animation:shake .45s}
 @keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
@@ -151,6 +156,7 @@ input::placeholder{color:rgba(244,251,255,.3)}
   <section class="screen dim" id="s-lose"></section>
   <section class="screen dim" id="s-clue"></section>
   <section class="screen dim" id="s-guess"></section>
+  <section class="screen dim" id="s-quiz"></section>
   <section class="screen dim" id="s-reveal"></section>
   <section class="screen dim" id="s-final"></section>
   <section class="screen" id="s-book"></section>
@@ -181,13 +187,18 @@ const CONFIG = {
   guests: [
     {
       label: 'Invitado 1',
-      name: 'Toño y Elisa Sosa',             // nombre del invitado. Es la respuesta correcta
-      options: ['Mutombo', 'Mel Tari', 'Toño y Elisa Sosa', 'Claudio Freidzon'],   // opciones que ve la gente. Debe incluir el nombre correcto
+      name: 'Toño y Elisa Fonseca',          // nombre del invitado. Es la respuesta correcta
+      options: ['Mutombo', 'Mel Tari', 'Toño y Elisa Fonseca', 'Claudio Freidzon'],   // opciones que ve la gente. Debe incluir el nombre correcto
       photo: '',                             // ruta de la foto, por ejemplo 'invitado1.jpg'
-      clues: [
-        'Toño',
-        'Elisa',
-        'Avivamexico'
+      // En vez de pistas, este invitado usa preguntas de selección múltiple.
+      // Cada pregunta sale en el orden escrito, con letras A, B, C. 'correct' debe ser igual a una de las opciones.
+      quiz: [
+        { q: '¿El invitado es hombre o mujer?',
+          options: ['Mujer', 'Hombre', 'Es una pareja'], correct: 'Es una pareja' },
+        { q: '¿De qué país crees que son nuestros invitados?',
+          options: ['USA', 'Argentina', 'México'], correct: 'México' },
+        { q: '¿Es una banda o un conferencista?',
+          options: ['Conferencista', 'Banda', 'A y B son correctas'], correct: 'Conferencista' }
       ]
     },
     {
@@ -208,10 +219,16 @@ const FLAME = CONFIG.assets.flame;
 /* ========================================================= */
 
 const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const params = new URLSearchParams(location.search);
 const TARGET = params.has('rapido') ? 1 : CONFIG.pointsToWin;
 const KEY = 'dunamis-progreso-v1';
 const G = CONFIG.guests;
+G.forEach(g => { if (g.quiz) g.clues = g.quiz.map(q => q.correct); });   // la respuesta correcta queda como pista guardada
+const word = g => g.quiz ? 'Pregunta' : 'Pista';
+const clueHTML = (g, ci) => g.quiz
+  ? '<span class="qq">' + esc(g.quiz[ci].q) + '</span>' + esc(g.quiz[ci].correct)
+  : esc(g.clues[ci]);
 
 /* ---------- Progreso guardado en el celular ---------- */
 const fresh = () => ({ clues: G.map(() => [false,false,false]), solved: G.map(() => false) });
@@ -248,7 +265,7 @@ $('#btnSnd').addEventListener('click', () => {
 });
 
 /* ---------- Pantallas ---------- */
-const screens = ['intro','pre','lose','clue','guess','reveal','final'];
+const screens = ['intro','pre','lose','clue','guess','quiz','reveal','final'];
 let overlay = true;
 function show(name){
   overlay = name !== null;
@@ -256,10 +273,10 @@ function show(name){
   const inGame = name === null;
   $('#btnBook').classList.toggle('off', name === 'reveal' || name === 'final' ? false : false);
 }
-const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const dots = (arr) => '<div class="dots">' + arr.map(f => '<i class="'+(f?'f':'')+'"></i>').join('') + '</div>';
 
 function route(){
+  if (state.pending) return showQuestion(state.pending[0], state.pending[1]);   // ganó el punto pero no respondió
   const gi = state.solved.findIndex(s => !s);
   if (gi === -1) return showFinal();
   const ci = state.clues[gi].findIndex(c => !c);
@@ -285,17 +302,41 @@ function showPre(gi, ci){
   $('#s-pre').innerHTML =
     '<div class="kicker">Nivel ' + (lvl+1) + ' de ' + (G.length*3) + '</div>' +
     '<h2>' + esc(G[gi].label) + '</h2>' +
-    '<p class="lead">Pista ' + (ci+1) + ' de 3.<br>Mueve tu paleta con el dedo o el mouse. El primero en llegar a ' + TARGET + ' punto' + (TARGET>1?'s':'') + ' gana.</p>' +
+    '<p class="lead">' + word(G[gi]) + ' ' + (ci+1) + ' de 3.<br>Mueve tu paleta con el dedo o el mouse. El primero en llegar a ' + TARGET + ' punto' + (TARGET>1?'s':'') + ' gana.' + (G[gi].quiz ? ' Luego responde una pregunta.' : '') + '</p>' +
     dots(state.clues[gi]) +
     '<div style="height:26px"></div><button class="btn solid" data-act="play" data-l="'+lvl+'">Jugar</button>';
   show('pre');
   $('#btnBook').classList.remove('off');
 }
 
+function showQuestion(gi, ci){
+  const g = G[gi], q = g.quiz[ci];
+  $('#s-quiz').innerHTML =
+    '<div class="kicker">Pregunta ' + (ci+1) + ' de 3 · ' + esc(g.label) + '</div>' +
+    '<div class="qtext">' + esc(q.q) + '</div>' +
+    '<div class="opts">' + q.options.map((o,i) => '<button class="opt" data-act="ans" data-g="'+gi+'" data-c="'+ci+'" data-i="'+i+'"><span class="let">'+'ABCDEF'[i]+'.</span>'+esc(o)+'</button>').join('') + '</div>' +
+    '<div class="msg" id="msgq"></div>';
+  show('quiz');
+  $('#btnBook').classList.remove('off');
+}
+function pickAnswer(btn){
+  if (btn.disabled || btn.classList.contains('ok')) return;
+  const gi = +btn.dataset.g, ci = +btn.dataset.c, q = G[gi].quiz[ci];
+  if (q.options[+btn.dataset.i] !== q.correct){
+    btn.disabled = true; btn.classList.add('bad'); sfx.wrong();
+    $('#msgq').textContent = 'Todavía no. Prueba con otra opción.';
+    return;
+  }
+  btn.classList.add('ok');
+  document.querySelectorAll('#s-quiz .opt').forEach(o => o.disabled = true);
+  state.clues[gi][ci] = true; state.pending = null; save();
+  setTimeout(() => showClue(gi, ci), 650);
+}
+
 function showClue(gi, ci){
   $('#s-clue').innerHTML =
-    '<div class="kicker">Pista ' + (ci+1) + ' de 3 · ' + esc(G[gi].label) + '</div>' +
-    '<div class="cluetext">' + esc(G[gi].clues[ci]) + '</div>' +
+    '<div class="kicker">' + word(G[gi]) + ' ' + (ci+1) + ' de 3 · ' + esc(G[gi].label) + (G[gi].quiz ? ' · correcta' : '') + '</div>' +
+    '<div class="cluetext">' + clueHTML(G[gi], ci) + '</div>' +
     dots(state.clues[gi]) +
     '<div style="height:28px"></div>' +
     '<button class="btn solid" data-act="next">' + (ci === 2 ? 'Adivinar quién es' : 'Continuar') + '</button>';
@@ -310,9 +351,9 @@ function showGuess(gi){
   guessOpts = g.options.includes(g.name) ? g.options.slice() : g.options.concat([g.name]);
   if (CONFIG.shuffleOptions) for (let i = guessOpts.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [guessOpts[i], guessOpts[j]] = [guessOpts[j], guessOpts[i]]; }
   $('#s-guess').innerHTML =
-    '<div class="kicker">' + esc(g.label) + ' · tienes las 3 pistas</div>' +
+    '<div class="kicker">' + esc(g.label) + (g.quiz ? ' · respondiste las 3 preguntas' : ' · tienes las 3 pistas') + '</div>' +
     '<h2>¿Quién es?</h2>' +
-    '<ul class="cluelist">' + g.clues.map((c,i) => '<li><b>'+(i+1)+'</b>'+esc(c)+'</li>').join('') + '</ul>' +
+    '<ul class="cluelist">' + g.clues.map((c,i) => '<li><b>'+(i+1)+'</b>'+clueHTML(g,i)+'</li>').join('') + '</ul>' +
     '<div class="opts">' + guessOpts.map((o,i) => '<button class="opt" data-act="pick" data-g="'+gi+'" data-i="'+i+'">'+esc(o)+'</button>').join('') + '</div>' +
     '<div class="msg" id="msg"></div>';
   show('guess');
@@ -384,7 +425,7 @@ function renderBook(){
       '<div class="gcount">' + found + ' de 3 pistas</div></div></div>';
     g.clues.forEach((c, ci) => {
       h += state.clues[gi][ci]
-        ? '<div class="slot"><b>'+(ci+1)+'</b><span>'+esc(c)+'</span></div>'
+        ? '<div class="slot"><b>'+(ci+1)+'</b><span>'+clueHTML(g,ci)+'</span></div>'
         : '<div class="slot lock"><b>'+(ci+1)+'</b><span>'+lockSvg+(locked ? 'Se abre al descubrir al invitado 1' : 'Bloqueada')+'</span></div>';
     });
     h += '</div>';
@@ -413,6 +454,7 @@ $('#stage').addEventListener('click', e => {
   else if (a === 'play') startLevel(+b.dataset.l);
   else if (a === 'retry') startLevel(cur.level);
   else if (a === 'pick') pickOption(b);
+  else if (a === 'ans') pickAnswer(b);
   else if (a === 'book') openBook();
   else if (a === 'share') share();
   else if (a === 'restart') { if (confirm('Se borrará tu progreso. ¿Seguro?')) { state = fresh(); save(); showIntro(); } }
@@ -481,6 +523,11 @@ function launch(){
 function levelWon(){
   mode = 'over'; sfx.win();
   burst(W/2, H/2, 120, 380);
+  if (G[cur.gi].quiz){            // invitado con preguntas: primero responde
+    state.pending = [cur.gi, cur.ci]; save();
+    setTimeout(() => showQuestion(cur.gi, cur.ci), 900);
+    return;
+  }
   state.clues[cur.gi][cur.ci] = true; save();
   setTimeout(() => showClue(cur.gi, cur.ci), 900);
 }
@@ -601,7 +648,7 @@ function draw(){
     ctx.fillStyle = 'rgba(201,238,76,.92)'; ctx.fillText(String(score.p).padStart(2,'0'), W*.28, H*.73);
     ctx.font = '700 ' + Math.max(9, W*.026) + 'px Montserrat,system-ui,sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,.85)';
-    ctx.fillText('NIVEL ' + (cur.level+1) + ' · ' + G[cur.gi].label.toUpperCase() + ' · PISTA ' + (cur.ci+1), W/2, H*.035);
+    ctx.fillText('NIVEL ' + (cur.level+1) + ' · ' + G[cur.gi].label.toUpperCase() + ' · ' + word(G[cur.gi]).toUpperCase() + ' ' + (cur.ci+1), W/2, H*.035);
 
     // barra del computador: la ola, apoyada sobre su base
     if (cpuImg.complete && cpuImg.naturalWidth){
