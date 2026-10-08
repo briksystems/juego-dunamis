@@ -12,7 +12,7 @@
 <style>
 :root{
   --accent:#c9ee4c; --ink:#06121c; --paper:#f4fbff;
-  /* Tipografía: cambia aquí la fuente de toda la página */
+  /* Tipografía: */
   --sans:'Montserrat',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --display:'Montserrat',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
@@ -166,26 +166,26 @@ input::placeholder{color:rgba(244,251,255,.3)}
 'use strict';
 
 /* =========================================================
-   CONFIGURACIÓN: aquí cambias todo el contenido
+   CONFIGURACIÓN:
    ========================================================= */
 const CONFIG = {
-  assets: {                // rutas de las imágenes, relativas a index.html
+  assets: {                // rutas de las imágenes.
     background: 'assets/c24dcd9f-image.jpg',   // fondo de toda la página
     playerBar:  'assets/d1788457-image.png',   // barra del jugador (pastilla con la D)
     cpuBar:     'assets/471def09-image.png',   // barra del computador (ola)
     flame:      'assets/9e6f2fe2-image.png',   // llama que se ve detrás de la cancha
-    logo:       'assets/logo-dunamis.png'      // logo blanco del inicio y la revelación
+    logo:       'assets/logo-dunamis.png'      // logo blanco del inicio.
   },
   pointsToWin: 1,          // puntos para ganar cada nivel
-  shuffleOptions: true,    // true = las opciones salen en orden distinto cada vez. false = en el orden escrito
+  shuffleOptions: true,    
   event: { date: 'Fecha por confirmar', place: 'Lugar por confirmar' },
   guests: [
     {
       label: 'Invitado 1',
       name: 'Toño y Elisa Fonseca',             // nombre del invitado. Es la respuesta correcta
       options: ['Dr. Samuel y Nohemí Pagan', 'Miguel Esteban y Valentina Arrazola', 'Toño y Elisa Fonseca'],   // opciones que ve la gente. Debe incluir el nombre correcto
-      reveal: '¡Son los pastores Toño y Elisa Fonseca!',   // frase grande de la revelación
-      photo: '',                             // ruta de la foto, por ejemplo 'invitado1.jpg'
+      reveal: '¡Son los pastores Toño y Elisa Fonseca!',   // frase grande 
+      photo: '',                             // ruta de la foto
       clues: [
         'Esta vez no viene una sola persona, viene una pareja que sirve junta.',
         'Cruzan la frontera desde tierras aztecas: son de México.',
@@ -372,7 +372,7 @@ function share(){
   else if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + url).then(() => alert('Enlace copiado'), ()=>{});
 }
 
-/* ---------- Libreta de pistas ---------- */
+/* ---------- Pistas ---------- */
 const lockSvg = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 let bookOpen = false, modeBeforeBook = 'idle';
 function renderBook(){
@@ -438,8 +438,7 @@ const logoImg = new Image(); logoImg.src = LOGO;
 const flameImg = new Image(); flameImg.src = FLAME;
 const playerImg = new Image(); playerImg.src = CONFIG.assets.playerBar;
 const cpuImg = new Image(); cpuImg.src = CONFIG.assets.cpuBar;
-// Medidas (en píxeles) de cada imagen original. No cambian aunque se cambie el tamaño en pantalla.
-//  box  = zona visible de la imagen (x, y, ancho, alto)
+
 //  hit  = la parte que golpea la pelota (en el jugador, la pastilla verde. en el computador, la base de la ola)
 const PLAYER_ART = { box:[17,436,1885,509], pill:[17,539,1885,290] };
 const CPU_ART    = { box:[57,322,1724,569] };
@@ -571,7 +570,7 @@ function draw(){
   const inGame = !overlay && (mode === 'serve' || mode === 'play' || mode === 'paused' || mode === 'over');
   const lineA = inGame ? .26 + .04*diff() : .14;
 
-  // líneas de la cancha (un solo color, sin degradado)
+  // líneas de la cancha
   ctx.save(); ctx.lineWidth = 1;
   const x1 = W*.1, x2 = W*.9;
   const lines = () => {
@@ -586,7 +585,7 @@ function draw(){
   if (flashLines > .02){ ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(201,238,76,' + (flashLines*.8).toFixed(3) + ')'; lines(); }
   ctx.restore();
 
-  // llama de fondo, respira y se enciende cuando alguien anota
+  // llama de fondo
   if (flameImg.complete && flameImg.naturalWidth){
     const tt = performance.now()/1000, ar = flameImg.naturalWidth/flameImg.naturalHeight;
     const fh = Math.min(H*.5, W*1.05/ar) * (1 + .025*Math.sin(tt*1.3)), fw = fh*ar;
@@ -606,13 +605,13 @@ function draw(){
     ctx.fillStyle = 'rgba(255,255,255,.85)';
     ctx.fillText('NIVEL ' + (cur.level+1) + ' · ' + G[cur.gi].label.toUpperCase() + ' · PISTA ' + (cur.ci+1), W/2, H*.035);
 
-    // barra del computador: la ola, apoyada sobre su base
+    // barra del computador: la ola
     if (cpuImg.complete && cpuImg.naturalWidth){
       const [sx, sy, sw, sh] = CPU_ART.box, vw = pw*1.2, k = vw/sw, dh = sh*k;
       ctx.drawImage(cpuImg, sx, sy, sw, sh, O.x - vw/2, oy + oh/2 - dh, vw, dh);
     }
 
-    // barra del jugador: la pastilla con la D
+    // barra del jugador: la D de dunamis 
     if (playerImg.complete && playerImg.naturalWidth){
       const [sx, sy, sw, sh] = PLAYER_ART.box, [px, py0, pwid, phei] = PLAYER_ART.pill, k = pw/pwid;
       ctx.drawImage(playerImg, sx, sy, sw, sh, P.x - pw/2 - (px - sx)*k, py - phei*k/2 - (py0 - sy)*k, sw*k, sh*k);
@@ -624,7 +623,7 @@ function draw(){
     gg.addColorStop(0,'rgba(201,238,76,.7)'); gg.addColorStop(1,'rgba(201,238,76,0)');
     ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r*4, 0, 7); ctx.fill(); ctx.restore();
     if (logoImg.complete && logoImg.naturalWidth){
-      const d = ball.r*2*1.06, h = d*(logoImg.naturalHeight/logoImg.naturalWidth);   // mismo tamaño de la bolita anterior
+      const d = ball.r*2*1.06, h = d*(logoImg.naturalHeight/logoImg.naturalWidth);  
       ctx.drawImage(logoImg, ball.x - d/2, ball.y - h/2, d, h);
     } else { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, 7); ctx.fill(); }
 
@@ -666,7 +665,7 @@ function frame(now){
   P.tx = Math.max(0, Math.min(W, P.tx));
   update(dt); draw(); requestAnimationFrame(frame);
 }
-// si la pestaña se pausó sola, reanudar al tocar
+// si la pestaña se pausó sola, reanuda al tocar
 cv.addEventListener('pointerdown', () => { if (mode === 'paused' && !bookOpen) mode = 'play'; });
 
 resize(); showIntro(); requestAnimationFrame(frame);
