@@ -104,6 +104,11 @@ input::placeholder{color:rgba(244,251,255,.3)}
 @keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 
 /* revelación */
+.screen.full{padding:0}
+.screen.full .fimg{position:absolute;left:0;top:0;width:100%;height:calc(100% - 104px);object-fit:contain;object-position:center top}
+.screen.full .link{color:#fff;border-color:rgba(255,255,255,.6);text-shadow:0 1px 6px #000}
+.screen.full .fbtn{position:absolute;left:0;right:0;bottom:max(34px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:6px}
+.photo.full{width:auto;height:min(46vh,420px);aspect-ratio:9/16;border-radius:14px;margin:4px auto 18px}
 .photo{width:min(58vw,230px);aspect-ratio:1;border-radius:50%;margin:6px auto 22px;position:relative;
   border:2px solid var(--accent);box-shadow:0 10px 50px rgba(0,0,0,.45);
   background:rgba(3,14,26,.85) center/cover;display:grid;place-items:center;overflow:hidden}
@@ -148,6 +153,7 @@ input::placeholder{color:rgba(244,251,255,.3)}
   </button>
 
   <section class="screen on" id="s-intro"></section>
+  <section class="screen" id="s-quien"></section>
   <section class="screen dim" id="s-pre"></section>
   <section class="screen dim" id="s-lose"></section>
   <section class="screen dim" id="s-clue"></section>
@@ -170,11 +176,13 @@ input::placeholder{color:rgba(244,251,255,.3)}
    ========================================================= */
 const CONFIG = {
   assets: {                
-    background: 'assets/c24dcd9f-image.jpg',   // fondo
-    playerBar:  'assets/d1788457-image.png',   // barra jugador
-    cpuBar:     'assets/471def09-image.png',   // barra computador
-    flame:      'assets/9e6f2fe2-image.png',   // llama
-    logo:       'assets/logo-dunamis.png'      // logo
+    background: 'assets/fondo.jpg',   // fondo
+    playerBar:  'assets/barra-usuario.png',   // barra jugador
+    cpuBar:     'assets/barra-computador.png',   // barra computador
+    flame:      'assets/llama-dunamis.png',   // llama
+    logo:       'assets/logo-dunamis.png',     // logo
+    hidden:     'assets/quienes.png',  // imagen quiénes
+    revealed:   'assets/toño_elisa.png' // imagen resultado
   },
   eventUrl: 'https://youtu.be/A9pbyAZOUJU?si=YbDfeRxEwUXPcf9R',   // enlace evento
   pointsToWin: 1,          // puntos por nivel
@@ -240,7 +248,7 @@ $('#btnSnd').addEventListener('click', () => {
 });
 
 /* ---------- Pantallas ---------- */
-const screens = ['intro','pre','lose','clue','guess','reveal','final'];
+const screens = ['intro','quien','pre','lose','clue','guess','reveal','final'];
 let overlay = true;
 function show(name){
   overlay = name !== null;
@@ -253,7 +261,7 @@ const dots = (arr) => '<div class="dots">' + arr.map(f => '<i class="'+(f?'f':''
 
 function route(){
   const gi = state.solved.findIndex(s => !s);
-  if (gi === -1) return showFinal();
+  if (gi === -1) return showReveal(G.length-1);
   const ci = state.clues[gi].findIndex(c => !c);
   if (ci === -1) return showGuess(gi);
   showPre(gi, ci);
@@ -269,6 +277,16 @@ function showIntro(){
     '<div class="row"><button class="btn solid" data-act="start">' + (hasProgress() ? 'Continuar' : 'Empezar') + '</button>' +
     (hasProgress() ? '<button class="link" data-act="book">Mi libreta de pistas</button>' : '') + '</div>';
   show('intro');
+  $('#btnBook').classList.add('off');
+}
+
+let quienVisto = false;
+function showQuien(){
+  $('#s-quien').classList.add('full');
+  $('#s-quien').innerHTML =
+    '<img class="fimg" src="' + encodeURI(CONFIG.assets.hidden) + '" alt="">' +
+    '<div class="fbtn"><button class="btn solid" data-act="play" data-l="0">Continuar</button></div>';
+  show('quien');
   $('#btnBook').classList.add('off');
 }
 
@@ -327,18 +345,15 @@ function pickOption(btn){
 
 function showReveal(gi){
   const g = G[gi];
-  const photo = g.photo ? '<img class="ph" src="'+esc(g.photo)+'" alt="'+esc(g.name)+'">' : '<img class="lg" src="'+LOGO+'" alt="">';
+  $('#s-reveal').classList.remove('dim'); $('#s-reveal').classList.add('full');
   $('#s-reveal').innerHTML =
-    '<div class="kicker">Lo descubriste</div>' +
-    '<div class="photo">' + photo + '</div>' +
-    '<h2' + (g.reveal ? ' class="long"' : '') + '>' + esc(g.reveal || g.name) + '</h2>' +
-    '<p class="lead">Te espera en vivo en Dunamis.</p>' +
-    '<div class="row"><a class="btn solid" href="' + esc(CONFIG.eventUrl) + '" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">Ver el evento</a>' +
-    '<button class="link" data-act="share">Compartir</button></div>';
+    '<img class="fimg" src="' + encodeURI(CONFIG.assets.revealed) + '" alt="' + esc(g.name) + '">' +
+    '<div class="fbtn"><a class="btn solid" href="' + esc(CONFIG.eventUrl) + '" target="_blank" rel="noopener" style="text-decoration:none">Ver el evento</a>' +
+    '<button class="link" data-act="replay">Volver a jugar</button></div>';
   const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
   show('reveal');
+  $('#btnBook').classList.add('off');
   burst(W/2, H*.36, 160, 420); sfx.win();
-  setTimeout(() => burst(W/2, H*.36, 90, 300), 380);
 }
 
 function showFinal(){
@@ -402,7 +417,8 @@ $('#stage').addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act;
   if (a === 'start' || a === 'next') { initAudio(); route(); }
-  else if (a === 'play') startLevel(+b.dataset.l);
+  else if (a === 'replay') { state = fresh(); save(); quienVisto = false; showIntro(); }
+  else if (a === 'play') { if (+b.dataset.l === 0 && !hasProgress() && !quienVisto) { quienVisto = true; showQuien(); } else startLevel(+b.dataset.l); }
   else if (a === 'retry') startLevel(cur.level);
   else if (a === 'pick') pickOption(b);
   else if (a === 'book') openBook();
